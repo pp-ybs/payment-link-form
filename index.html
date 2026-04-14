@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Payment Link</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Serif+Display&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #FAF8F4;
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 16px 60px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.07);
+    padding: 36px 36px 32px;
+    width: 100%;
+    max-width: 500px;
+  }
+  h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 24px;
+    font-weight: 400;
+    text-align: center;
+    color: #1C1C1A;
+    margin-bottom: 28px;
+  }
+  .field { margin-bottom: 18px; }
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #6B6860;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .req { color: #C0392B; margin-left: 2px; }
+  input, select {
+    width: 100%;
+    height: 44px;
+    border: 1.5px solid #E8E4DC;
+    border-radius: 10px;
+    padding: 0 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    color: #1C1C1A;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s;
+    -webkit-appearance: none;
+  }
+  input:focus, select:focus { border-color: #C4855A; }
+  input::placeholder { color: #B5B0A6; }
+  .name-row { display: grid; grid-template-columns: 100px 1fr; gap: 8px; }
+  .amount-wrap { position: relative; }
+  .amount-wrap input { padding-right: 54px; }
+  .aed {
+    position: absolute; right: 14px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 13px; font-weight: 600; color: #B5B0A6;
+    pointer-events: none;
+  }
+  .err { font-size: 12px; color: #C0392B; margin-top: 5px; display: none; }
+  .btn {
+    width: 100%; height: 48px; margin-top: 8px;
+    background: #1C1C1A; color: #fff;
+    border: none; border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 500;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .btn:hover { background: #333; }
+  .btn:disabled { background: #B5B0A6; cursor: not-allowed; }
+  .divider { border: none; border-top: 1px solid #E8E4DC; margin: 24px 0; }
+  .result {
+    display: none;
+    background: #F0FAF4;
+    border: 1.5px solid #5bbf85;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 20px;
+  }
+  .result p { font-size: 14px; color: #1a5c35; font-weight: 500; margin-bottom: 12px; }
+  .link-row { display: flex; gap: 8px; }
+  .link-input {
+    flex: 1; height: 38px;
+    background: #fff; border: 1px solid #b8e0cb;
+    border-radius: 8px; padding: 0 10px;
+    font-size: 13px; color: #1C1C1A;
+    outline: none; min-width: 0;
+  }
+  .copy-btn {
+    height: 38px; padding: 0 16px;
+    background: #5bbf85; color: #fff;
+    border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+  }
+  .open-btn {
+    display: block; width: 100%; height: 38px;
+    margin-top: 8px; background: #fff;
+    border: 1.5px solid #5bbf85; border-radius: 8px;
+    color: #1a5c35; font-size: 13px; font-weight: 600;
+    text-align: center; line-height: 35px; text-decoration: none;
+  }
+  .err-global {
+    display: none; margin-top: 16px;
+    padding: 12px 14px; background: #fef2f2;
+    border: 1px solid #f0b4b4; border-radius: 8px;
+    font-size: 13px; color: #a33;
+  }
+  .loader { display: none; text-align: center; color: #6B6860; font-size: 14px; margin-top: 16px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Create Payment Link</h1>
+
+  <div class="field">
+    <label>Your Name <span class="req">*</span></label>
+    <input type="text" id="staffName" placeholder="Staff member name" />
+    <div class="err" id="err-staff">Please enter your name.</div>
+  </div>
+
+  <hr class="divider">
+
+  <div class="field">
+    <label>Client Name <span class="req">*</span></label>
+    <div class="name-row">
+      <select id="salutation">
+        <option value="Mrs.">Mrs.</option>
+        <option value="Mr.">Mr.</option>
+        <option value="Ms.">Ms.</option>
+        <option value="Dr.">Dr.</option>
+      </select>
+      <input type="text" id="clientName" placeholder="Full name" />
+    </div>
+    <div class="err" id="err-name">Please enter client name.</div>
+  </div>
+
+  <div class="field">
+    <label>Client Email <span class="req">*</span></label>
+    <input type="email" id="clientEmail" placeholder="client@example.com" />
+    <div class="err" id="err-email">Please enter a valid email.</div>
+  </div>
+
+  <div class="field">
+    <label>Product / Service</label>
+    <input type="text" id="product" placeholder="e.g. Newborn session deposit" />
+  </div>
+
+  <div class="field">
+    <label>Amount <span class="req">*</span></label>
+    <div class="amount-wrap">
+      <input type="number" id="amount" placeholder="0.00" min="1" step="0.01" />
+      <span class="aed">AED</span>
+    </div>
+    <div class="err" id="err-amount">Please enter a valid amount.</div>
+  </div>
+
+  <button class="btn" id="submitBtn" onclick="handleSubmit()">Generate &amp; Send Link</button>
+  <div class="loader" id="loader">Creating payment link and sending email…</div>
+  <div class="err-global" id="err-global"></div>
+
+  <div class="result" id="result">
+    <p>✅ Link sent to client!</p>
+    <div class="link-row">
+      <input class="link-input" type="text" id="linkDisplay" readonly />
+      <button class="copy-btn" onclick="copyLink()">Copy</button>
+    </div>
+    <a class="open-btn" id="linkOpen" href="#" target="_blank">↗ Open in browser</a>
+  </div>
+</div>
+
+<script>
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby7Li8Pv1AITVK-E16587BWH682-7bU2Zu_KCvLkgFazi-BI8Vt-PJuUuHm80UYZ3wk/exec';
+
+  async function handleSubmit() {
+    const staffName   = document.getElementById('staffName').value.trim();
+    const clientName  = document.getElementById('clientName').value.trim();
+    const clientEmail = document.getElementById('clientEmail').value.trim();
+    const amount      = parseFloat(document.getElementById('amount').value);
+
+    let valid = true;
+    function showErr(id, show) { document.getElementById(id).style.display = show ? 'block' : 'none'; }
+    if (!staffName)   { showErr('err-staff', true);  valid = false; } else showErr('err-staff', false);
+    if (!clientName)  { showErr('err-name', true);   valid = false; } else showErr('err-name', false);
+    if (!clientEmail || !/\S+@\S+\.\S+/.test(clientEmail)) { showErr('err-email', true); valid = false; } else showErr('err-email', false);
+    if (!amount || amount <= 0) { showErr('err-amount', true); valid = false; } else showErr('err-amount', false);
+    if (!valid) return;
+
+    document.getElementById('submitBtn').disabled = true;
+    document.getElementById('loader').style.display = 'block';
+    document.getElementById('err-global').style.display = 'none';
+    document.getElementById('result').style.display = 'none';
+
+    const data = {
+      staffName,
+      salutation: document.getElementById('salutation').value,
+      clientName,
+      clientEmail,
+      product: document.getElementById('product').value.trim(),
+      amount: document.getElementById('amount').value
+    };
+
+    try {
+      const response = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+      const res = await response.json();
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('submitBtn').disabled = false;
+      if (res.url) {
+        document.getElementById('linkDisplay').value = res.url;
+        document.getElementById('linkOpen').href = res.url;
+        document.getElementById('result').style.display = 'block';
+      } else {
+        throw new Error(res.error || 'Unknown error');
+      }
+    } catch (err) {
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('submitBtn').disabled = false;
+      document.getElementById('err-global').style.display = 'block';
+      document.getElementById('err-global').textContent = 'Error: ' + err.message;
+    }
+  }
+
+  function copyLink() {
+    const input = document.getElementById('linkDisplay');
+    input.select();
+    document.execCommand('copy');
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  }
+</script>
+</body>
+</html>
