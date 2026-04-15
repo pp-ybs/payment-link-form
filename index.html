@@ -60,15 +60,29 @@
   input:focus, select:focus { border-color: #C4855A; }
   input::placeholder { color: #B5B0A6; }
   .name-row { display: grid; grid-template-columns: 100px 1fr; gap: 8px; }
-  .amount-wrap { position: relative; }
-  .amount-wrap input { padding-right: 54px; }
-  .aed {
-    position: absolute; right: 14px; top: 50%;
-    transform: translateY(-50%);
-    font-size: 13px; font-weight: 600; color: #B5B0A6;
-    pointer-events: none;
-  }
   .err { font-size: 12px; color: #C0392B; margin-top: 5px; display: none; }
+  .vat-box {
+    background: #FAF8F4;
+    border: 1.5px solid #E8E4DC;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 18px;
+    font-size: 14px;
+    color: #1C1C1A;
+  }
+  .vat-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .vat-row:last-child {
+    margin-bottom: 0;
+    font-weight: 500;
+    border-top: 1px solid #E8E4DC;
+    padding-top: 8px;
+    margin-top: 2px;
+  }
+  .vat-label { color: #6B6860; }
   .btn {
     width: 100%; height: 48px; margin-top: 8px;
     background: #1C1C1A; color: #fff;
@@ -169,18 +183,18 @@
     <div class="err" id="err-amount">Please enter a valid amount.</div>
   </div>
 
-  <div id="vat-box" style="display:none;background:#FAF8F4;border:1.5px solid #E8E4DC;border-radius:10px;padding:14px 16px;margin-bottom:18px;font-size:14px;color:#1C1C1A">
-    <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-      <span style="color:#6B6860">Subtotal</span>
-      <span id="vat-subtotal"></span>
+  <div class="vat-box">
+    <div class="vat-row">
+      <span class="vat-label">Subtotal</span>
+      <span id="vat-subtotal">—</span>
     </div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-      <span style="color:#6B6860">VAT (<span id="vat-rate-label">5%</span>)</span>
-      <span id="vat-amount"></span>
+    <div class="vat-row">
+      <span class="vat-label">VAT (<span id="vat-rate-label">5%</span>)</span>
+      <span id="vat-amount">—</span>
     </div>
-    <div style="display:flex;justify-content:space-between;font-weight:500;border-top:1px solid #E8E4DC;padding-top:8px;margin-top:2px">
+    <div class="vat-row">
       <span>Total</span>
-      <span id="vat-total"></span>
+      <span id="vat-total">—</span>
     </div>
   </div>
 
@@ -199,31 +213,44 @@
 </div>
 
 <script>
-  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby7Li8Pv1AITVK-E16587BWH682-7bU2Zu_KCvLkgFazi-BI8Vt-PJuUuHm80UYZ3wk/exec';
+  var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby7Li8Pv1AITVK-E16587BWH682-7bU2Zu_KCvLkgFazi-BI8Vt-PJuUuHm80UYZ3wk/exec';
 
   function updateVat() {
     var amount = parseFloat(document.getElementById('amount').value);
     var currency = document.getElementById('currency').value;
     var vatRate = currency === 'aed' ? 0.05 : 0;
-    var box = document.getElementById('vat-box');
-    if (!amount || amount <= 0) { box.style.display = 'none'; return; }
+    var curr = currency.toUpperCase();
+
+    document.getElementById('vat-rate-label').textContent = vatRate === 0 ? '0%' : '5%';
+
+    if (!amount || amount <= 0) {
+      document.getElementById('vat-subtotal').textContent = '—';
+      document.getElementById('vat-amount').textContent = '—';
+      document.getElementById('vat-total').textContent = '—';
+      return;
+    }
+
     var vatAmount = Math.round(amount * vatRate * 100) / 100;
     var total = Math.round((amount + vatAmount) * 100) / 100;
-    var curr = currency.toUpperCase();
-    document.getElementById('vat-rate-label').textContent = vatRate === 0 ? '0%' : '5%';
+
     document.getElementById('vat-subtotal').textContent = amount.toFixed(2) + ' ' + curr;
     document.getElementById('vat-amount').textContent = vatAmount.toFixed(2) + ' ' + curr;
     document.getElementById('vat-total').textContent = total.toFixed(2) + ' ' + curr;
-    box.style.display = 'block';
   }
 
-  async function handleSubmit() {
-    const staffName   = document.getElementById('staffName').value.trim();
-    const clientName  = document.getElementById('clientName').value.trim();
-    const clientEmail = document.getElementById('clientEmail').value.trim();
-    const amount      = parseFloat(document.getElementById('amount').value);
+  // Init on load
+  updateVat();
 
-    let valid = true;
+  async function handleSubmit() {
+    var staffName   = document.getElementById('staffName').value.trim();
+    var clientName  = document.getElementById('clientName').value.trim();
+    var clientEmail = document.getElementById('clientEmail').value.trim();
+    var amount      = parseFloat(document.getElementById('amount').value);
+    var currency    = document.getElementById('currency').value;
+    var vatRate     = currency === 'aed' ? 0.05 : 0;
+    var total       = Math.round((amount + amount * vatRate) * 100) / 100;
+
+    var valid = true;
     function showErr(id, show) { document.getElementById(id).style.display = show ? 'block' : 'none'; }
     if (!staffName)   { showErr('err-staff', true);  valid = false; } else showErr('err-staff', false);
     if (!clientName)  { showErr('err-name', true);   valid = false; } else showErr('err-name', false);
@@ -236,22 +263,22 @@
     document.getElementById('err-global').style.display = 'none';
     document.getElementById('result').style.display = 'none';
 
-    const data = {
-      staffName,
+    var data = {
+      staffName: staffName,
       salutation: document.getElementById('salutation').value,
-      clientName,
-      clientEmail,
+      clientName: clientName,
+      clientEmail: clientEmail,
       product: document.getElementById('product').value.trim(),
-      amount: (function(){ var a = parseFloat(document.getElementById('amount').value); var r = document.getElementById('currency').value === 'aed' ? 0.05 : 0; return (Math.round((a + a*r)*100)/100).toFixed(2); })(),
-      currency: document.getElementById('currency').value
+      amount: total.toFixed(2),
+      currency: currency
     };
 
     try {
-      const response = await fetch(APPS_SCRIPT_URL, {
+      var response = await fetch(APPS_SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify(data)
       });
-      const res = await response.json();
+      var res = await response.json();
       document.getElementById('loader').style.display = 'none';
       document.getElementById('submitBtn').disabled = false;
       if (res.url) {
@@ -270,12 +297,12 @@
   }
 
   function copyLink() {
-    const input = document.getElementById('linkDisplay');
+    var input = document.getElementById('linkDisplay');
     input.select();
     document.execCommand('copy');
-    const btn = document.querySelector('.copy-btn');
+    var btn = document.querySelector('.copy-btn');
     btn.textContent = 'Copied!';
-    setTimeout(() => btn.textContent = 'Copy', 2000);
+    setTimeout(function(){ btn.textContent = 'Copy'; }, 2000);
   }
 </script>
 </body>
