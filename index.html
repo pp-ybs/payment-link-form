@@ -22,7 +22,7 @@
     box-shadow: 0 2px 20px rgba(0,0,0,0.07);
     padding: 36px 36px 32px;
     width: 100%;
-    max-width: 500px;
+    max-width: 560px;
   }
   h1 {
     font-family: 'DM Serif Display', serif;
@@ -132,6 +132,67 @@
     font-size: 13px; color: #a33;
   }
   .loader { display: none; text-align: center; color: #6B6860; font-size: 14px; margin-top: 16px; }
+
+  /* Product rows */
+  .product-row {
+    border: 1.5px solid #E8E4DC;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 12px;
+    background: #FAF8F4;
+    position: relative;
+  }
+  .product-row .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .product-row .nums {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .product-row .sub-label {
+    font-size: 11px;
+    color: #6B6860;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .remove-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: transparent;
+    color: #C0392B;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 0;
+  }
+  .add-product-btn {
+    width: 100%;
+    height: 40px;
+    background: #fff;
+    border: 1.5px dashed #C4855A;
+    border-radius: 10px;
+    color: #C4855A;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: 18px;
+  }
+  .line-total {
+    text-align: right;
+    font-size: 13px;
+    color: #6B6860;
+    margin-top: 6px;
+  }
+  .line-total strong { color: #1C1C1A; }
 </style>
 </head>
 <body>
@@ -166,21 +227,49 @@
     <div class="err" id="err-email">Please enter a valid email.</div>
   </div>
 
-  <div class="field">
-    <label>Product / Service</label>
-    <input type="text" id="product" placeholder="e.g. Newborn session deposit" />
-  </div>
+  <hr class="divider">
 
   <div class="field">
-    <label>Amount <span class="req">*</span></label>
-    <div style="display:grid;grid-template-columns:1fr 90px;gap:8px">
-      <input type="number" id="amount" placeholder="0.00" min="0.01" step="0.01" oninput="updateVat()" />
-      <select id="currency" onchange="updateVat()">
+    <label>Payment Type <span class="req">*</span></label>
+    <select id="paymentType" onchange="togglePaymentType()">
+      <option value="manual">Manual amount</option>
+      <option value="products">Select products</option>
+    </select>
+  </div>
+
+  <!-- Manual mode -->
+  <div id="manualMode">
+    <div class="field">
+      <label>Product / Service</label>
+      <input type="text" id="product" placeholder="e.g. Newborn session deposit" />
+    </div>
+
+    <div class="field">
+      <label>Amount <span class="req">*</span></label>
+      <div style="display:grid;grid-template-columns:1fr 90px;gap:8px">
+        <input type="number" id="amount" placeholder="0.00" min="0.01" step="0.01" oninput="updateVat()" />
+        <select id="currency" onchange="updateVat()">
+          <option value="aed">AED</option>
+          <option value="qar">QAR</option>
+        </select>
+      </div>
+      <div class="err" id="err-amount">Please enter a valid amount.</div>
+    </div>
+  </div>
+
+  <!-- Products mode -->
+  <div id="productsMode" style="display:none">
+    <div id="productsList"></div>
+    <button type="button" class="add-product-btn" onclick="addProductRow()">+ Add product</button>
+
+    <div class="field">
+      <label>Currency <span class="req">*</span></label>
+      <select id="currencyProducts" onchange="updateVat()">
         <option value="aed">AED</option>
         <option value="qar">QAR</option>
       </select>
     </div>
-    <div class="err" id="err-amount">Please enter a valid amount.</div>
+    <div class="err" id="err-products">Please add at least one product with valid price.</div>
   </div>
 
   <div class="vat-box">
@@ -215,27 +304,145 @@
 <script>
   var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby7Li8Pv1AITVK-E16587BWH682-7bU2Zu_KCvLkgFazi-BI8Vt-PJuUuHm80UYZ3wk/exec';
 
+  // Product catalog from Zoho Books
+  var PRODUCTS = [
+    { id: '2606532000001845212', name: 'Acrylic Album 21x21' },
+    { id: '2606532000001845225', name: 'Acrylic Album 30x30' },
+    { id: '2606532000024682062', name: 'Photo Cover Album 21x21' },
+    { id: '2606532000023234528', name: 'Digital Frame' },
+    { id: '2606532000013495610', name: 'Acrylic Board 30x40' },
+    { id: '2606532000012568049', name: '5 Extra Photos' },
+    { id: '2606532000011577492', name: 'Leather Album 21X21' },
+    { id: '2606532000008506958', name: 'Extra Spreadsheets' },
+    { id: '2606532000008022014', name: '3 Days Express 1 Photo' },
+    { id: '2606532000008022005', name: '1 Day Express 1 Photo' },
+    { id: '2606532000007372065', name: '10 Extra Photos Bundle' },
+    { id: '2606532000007372083', name: '25 Extra Photos Bundle' },
+    { id: '2606532000007372074', name: '15 Extra Photos Bundle' },
+    { id: '2606532000007372001', name: '3 Extra Photos Bundle' },
+    { id: '2606532000007313002', name: 'Upgraded Album 30x30' },
+    { id: '2606532000003122001', name: 'Printed Photos with Box & USB' },
+    { id: '2606532000002798126', name: 'Extra photo' }
+  ];
+
+  var productRowCounter = 0;
+
+  function togglePaymentType() {
+    var type = document.getElementById('paymentType').value;
+    if (type === 'manual') {
+      document.getElementById('manualMode').style.display = 'block';
+      document.getElementById('productsMode').style.display = 'none';
+    } else {
+      document.getElementById('manualMode').style.display = 'none';
+      document.getElementById('productsMode').style.display = 'block';
+      if (document.querySelectorAll('.product-row').length === 0) {
+        addProductRow();
+      }
+    }
+    updateVat();
+  }
+
+  function addProductRow() {
+    productRowCounter++;
+    var id = 'prow-' + productRowCounter;
+    var list = document.getElementById('productsList');
+    var html =
+      '<div class="product-row" id="' + id + '">' +
+        '<button type="button" class="remove-btn" onclick="removeProductRow(\'' + id + '\')">×</button>' +
+        '<div class="grid">' +
+          '<div>' +
+            '<div class="sub-label">Product</div>' +
+            '<select class="p-select" onchange="updateVat()">' +
+              '<option value="">— Select —</option>' +
+              PRODUCTS.map(function(p) {
+                return '<option value="' + p.id + '" data-name="' + p.name + '">' + p.name + '</option>';
+              }).join('') +
+            '</select>' +
+          '</div>' +
+          '<div class="nums">' +
+            '<div>' +
+              '<div class="sub-label">Qty</div>' +
+              '<input type="number" class="p-qty" value="1" min="1" step="1" oninput="updateVat()" />' +
+            '</div>' +
+            '<div>' +
+              '<div class="sub-label">Unit Price</div>' +
+              '<input type="number" class="p-price" placeholder="0.00" min="0" step="0.01" oninput="updateVat()" />' +
+            '</div>' +
+            '<div>' +
+              '<div class="sub-label">Discount %</div>' +
+              '<input type="number" class="p-discount" value="0" min="0" max="100" step="0.01" oninput="updateVat()" />' +
+            '</div>' +
+          '</div>' +
+          '<div class="line-total">Line total: <strong class="p-linetotal">—</strong></div>' +
+        '</div>' +
+      '</div>';
+    list.insertAdjacentHTML('beforeend', html);
+  }
+
+  function removeProductRow(id) {
+    document.getElementById(id).remove();
+    updateVat();
+  }
+
+  function getSubtotalFromProducts() {
+    var rows = document.querySelectorAll('.product-row');
+    var subtotal = 0;
+    var currency = document.getElementById('currencyProducts').value.toUpperCase();
+    rows.forEach(function(row) {
+      var price = parseFloat(row.querySelector('.p-price').value) || 0;
+      var qty = parseFloat(row.querySelector('.p-qty').value) || 0;
+      var disc = parseFloat(row.querySelector('.p-discount').value) || 0;
+      var lineTotal = price * qty * (1 - disc / 100);
+      lineTotal = Math.round(lineTotal * 100) / 100;
+      subtotal += lineTotal;
+      row.querySelector('.p-linetotal').textContent = lineTotal > 0
+        ? lineTotal.toFixed(2) + ' ' + currency
+        : '—';
+    });
+    return Math.round(subtotal * 100) / 100;
+  }
+
   function updateVat() {
-    var amount = parseFloat(document.getElementById('amount').value);
-    var currency = document.getElementById('currency').value;
+    var type = document.getElementById('paymentType').value;
+    var currency, subtotal;
+
+    if (type === 'manual') {
+      currency = document.getElementById('currency').value;
+      var amount = parseFloat(document.getElementById('amount').value);
+      if (!amount || amount <= 0) {
+        showVat(null, null, null, currency);
+        return;
+      }
+      // In manual mode the entered amount is subtotal (pre-VAT)
+      subtotal = amount;
+    } else {
+      currency = document.getElementById('currencyProducts').value;
+      subtotal = getSubtotalFromProducts();
+      if (subtotal <= 0) {
+        showVat(null, null, null, currency);
+        return;
+      }
+    }
+
     var vatRate = currency === 'aed' ? 0.05 : 0;
+    var vatAmount = Math.round(subtotal * vatRate * 100) / 100;
+    var total = Math.round((subtotal + vatAmount) * 100) / 100;
+    showVat(subtotal, vatAmount, total, currency);
+  }
+
+  function showVat(subtotal, vat, total, currency) {
     var curr = currency.toUpperCase();
-
-    document.getElementById('vat-rate-label').textContent = vatRate === 0 ? '0%' : '5%';
-
-    if (!amount || amount <= 0) {
+    var rate = currency === 'aed' ? '5%' : '0%';
+    document.getElementById('vat-rate-label').textContent = rate;
+    if (subtotal === null) {
       document.getElementById('vat-subtotal').textContent = '—';
       document.getElementById('vat-amount').textContent = '—';
       document.getElementById('vat-total').textContent = '—';
-      return;
+    } else {
+      document.getElementById('vat-subtotal').textContent = subtotal.toFixed(2) + ' ' + curr;
+      document.getElementById('vat-amount').textContent = vat.toFixed(2) + ' ' + curr;
+      document.getElementById('vat-total').textContent = total.toFixed(2) + ' ' + curr;
     }
-
-    var vatAmount = Math.round(amount * vatRate * 100) / 100;
-    var total = Math.round((amount + vatAmount) * 100) / 100;
-
-    document.getElementById('vat-subtotal').textContent = amount.toFixed(2) + ' ' + curr;
-    document.getElementById('vat-amount').textContent = vatAmount.toFixed(2) + ' ' + curr;
-    document.getElementById('vat-total').textContent = total.toFixed(2) + ' ' + curr;
   }
 
   // Init on load
@@ -245,33 +452,62 @@
     var staffName   = document.getElementById('staffName').value.trim();
     var clientName  = document.getElementById('clientName').value.trim();
     var clientEmail = document.getElementById('clientEmail').value.trim();
-    var amount      = parseFloat(document.getElementById('amount').value);
-    var currency    = document.getElementById('currency').value;
-    var vatRate     = currency === 'aed' ? 0.05 : 0;
-    var total       = Math.round((amount + amount * vatRate) * 100) / 100;
+    var paymentType = document.getElementById('paymentType').value;
 
     var valid = true;
     function showErr(id, show) { document.getElementById(id).style.display = show ? 'block' : 'none'; }
     if (!staffName)   { showErr('err-staff', true);  valid = false; } else showErr('err-staff', false);
     if (!clientName)  { showErr('err-name', true);   valid = false; } else showErr('err-name', false);
     if (!clientEmail || !/\S+@\S+\.\S+/.test(clientEmail)) { showErr('err-email', true); valid = false; } else showErr('err-email', false);
-    if (!amount || amount <= 0) { showErr('err-amount', true); valid = false; } else showErr('err-amount', false);
-    if (!valid) return;
-
-    document.getElementById('submitBtn').disabled = true;
-    document.getElementById('loader').style.display = 'block';
-    document.getElementById('err-global').style.display = 'none';
-    document.getElementById('result').style.display = 'none';
 
     var data = {
       staffName: staffName,
       salutation: document.getElementById('salutation').value,
       clientName: clientName,
       clientEmail: clientEmail,
-      product: document.getElementById('product').value.trim(),
-      amount: total.toFixed(2),
-      currency: currency
+      paymentType: paymentType
     };
+
+    if (paymentType === 'manual') {
+      var amount = parseFloat(document.getElementById('amount').value);
+      var currency = document.getElementById('currency').value;
+      if (!amount || amount <= 0) { showErr('err-amount', true); valid = false; } else showErr('err-amount', false);
+      if (!valid) return;
+      var vatRate = currency === 'aed' ? 0.05 : 0;
+      var total = Math.round((amount + amount * vatRate) * 100) / 100;
+      data.product = document.getElementById('product').value.trim();
+      data.amount = total.toFixed(2);
+      data.currency = currency;
+    } else {
+      var rows = document.querySelectorAll('.product-row');
+      var items = [];
+      rows.forEach(function(row) {
+        var select = row.querySelector('.p-select');
+        var itemId = select.value;
+        var name = select.options[select.selectedIndex] ? select.options[select.selectedIndex].getAttribute('data-name') : '';
+        var price = parseFloat(row.querySelector('.p-price').value) || 0;
+        var qty = parseFloat(row.querySelector('.p-qty').value) || 0;
+        var disc = parseFloat(row.querySelector('.p-discount').value) || 0;
+        if (itemId && price > 0 && qty > 0) {
+          items.push({ item_id: itemId, name: name, qty: qty, unit_price: price, discount: disc });
+        }
+      });
+      if (items.length === 0) { showErr('err-products', true); valid = false; } else showErr('err-products', false);
+      if (!valid) return;
+      var currency = document.getElementById('currencyProducts').value;
+      var subtotal = getSubtotalFromProducts();
+      var vatRate = currency === 'aed' ? 0.05 : 0;
+      var total = Math.round((subtotal + subtotal * vatRate) * 100) / 100;
+      data.items = items;
+      data.amount = total.toFixed(2);
+      data.currency = currency;
+      data.product = items.map(function(i) { return i.name + ' x' + i.qty; }).join(', ');
+    }
+
+    document.getElementById('submitBtn').disabled = true;
+    document.getElementById('loader').style.display = 'block';
+    document.getElementById('err-global').style.display = 'none';
+    document.getElementById('result').style.display = 'none';
 
     try {
       var response = await fetch(APPS_SCRIPT_URL, {
