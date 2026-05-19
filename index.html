@@ -240,8 +240,9 @@
   <!-- Manual mode -->
   <div id="manualMode">
     <div class="field">
-      <label>Product / Service</label>
+      <label>Product / Service <span class="req">*</span></label>
       <input type="text" id="product" placeholder="e.g. Newborn session deposit" />
+      <div class="err" id="err-product">Please enter product name.</div>
     </div>
 
     <div class="field">
@@ -352,12 +353,17 @@
         '<div class="grid">' +
           '<div>' +
             '<div class="sub-label">Product</div>' +
-            '<select class="p-select" onchange="updateVat()">' +
+            '<select class="p-select" onchange="onProductSelectChange(this)">' +
               '<option value="">— Select —</option>' +
               PRODUCTS.map(function(p) {
                 return '<option value="' + p.id + '" data-name="' + p.name + '">' + p.name + '</option>';
               }).join('') +
+              '<option value="__custom__" data-name="">── Custom product ──</option>' +
             '</select>' +
+            '<div class="p-custom-name-wrap" style="display:none;margin-top:8px">' +
+              '<div class="sub-label">Custom name</div>' +
+              '<input type="text" class="p-custom-name" maxlength="80" placeholder="e.g. Family session 2 hours" oninput="updateVat()" />' +
+            '</div>' +
           '</div>' +
           '<div class="nums">' +
             '<div>' +
@@ -377,6 +383,18 @@
         '</div>' +
       '</div>';
     list.insertAdjacentHTML('beforeend', html);
+  }
+
+  function onProductSelectChange(selectEl) {
+    var row = selectEl.closest('.product-row');
+    var wrap = row.querySelector('.p-custom-name-wrap');
+    if (selectEl.value === '__custom__') {
+      wrap.style.display = 'block';
+    } else {
+      wrap.style.display = 'none';
+      row.querySelector('.p-custom-name').value = '';
+    }
+    updateVat();
   }
 
   function removeProductRow(id) {
@@ -471,11 +489,13 @@
     if (paymentType === 'manual') {
       var amount = parseFloat(document.getElementById('amount').value);
       var currency = document.getElementById('currency').value;
+      var product = document.getElementById('product').value.trim();
+      if (!product) { showErr('err-product', true); valid = false; } else showErr('err-product', false);
       if (!amount || amount <= 0) { showErr('err-amount', true); valid = false; } else showErr('err-amount', false);
       if (!valid) return;
       var vatRate = currency === 'aed' ? 0.05 : 0;
       var total = Math.round((amount + amount * vatRate) * 100) / 100;
-      data.product = document.getElementById('product').value.trim();
+      data.product = product;
       data.amount = total.toFixed(2);
       data.currency = currency;
     } else {
@@ -488,7 +508,14 @@
         var price = parseFloat(row.querySelector('.p-price').value) || 0;
         var qty = parseFloat(row.querySelector('.p-qty').value) || 0;
         var disc = parseFloat(row.querySelector('.p-discount').value) || 0;
-        if (itemId && price > 0 && qty > 0) {
+
+        // Handle custom product
+        if (itemId === '__custom__') {
+          var customName = row.querySelector('.p-custom-name').value.trim();
+          if (customName && price > 0 && qty > 0) {
+            items.push({ item_id: '', name: customName, qty: qty, unit_price: price, discount: disc });
+          }
+        } else if (itemId && price > 0 && qty > 0) {
           items.push({ item_id: itemId, name: name, qty: qty, unit_price: price, discount: disc });
         }
       });
